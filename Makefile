@@ -2,11 +2,9 @@
 # updated 190921 change to clang (8.0 instead of 3.9)
 
 CLANG_VERSION=90
-GCC_VERSION=8.4.0
 
 NAME	= tinyusb
 CC	= clang$(CLANG_VERSION)
-CC	= clang$(CLANG_VERSION) -I/usr/local/lib/gcc/arm-none-eabi/$(GCC_VERSION)/include
 
 LD  		= ld.lld$(CLANG_VERSION)
 OBJCOPY 	= llvm-objcopy$(CLANG_VERSION)
@@ -25,6 +23,8 @@ DIRS 	+= -I . -I /usr/local/arm-none-eabi/include \
 		   -I hw/mcu/st/st_driver/STM32F1xx_HAL_Driver/Inc \
 		   -I hw/bsp/stm32f103bluepill/ \
 		   -I hw/
+# GCC x.y includes (like stddef.h)
+DIRS 	+= -I $(shell arm-none-eabi-gcc -print-search-dirs | awk '/install/{print $$2}')/include
 
 LINKER_FILE		= hw/bsp/stm32f103bluepill/STM32F103XB_FLASH.ld
 DEFINES += -DSTM32F103xB -DCFG_TUSB_MCU=OPT_MCU_STM32F1
