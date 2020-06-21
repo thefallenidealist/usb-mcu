@@ -1,0 +1,58 @@
+#!/usr/bin/env zsh
+# zsh used - for {} to work
+#
+# 200621
+# get tinyusb and strip it for STM32F103
+
+set -xe
+
+# get tinyusb source
+git clone https://github.com/hathach/tinyusb tmp-tinyusb
+cd tmp-tinyusb && git submodule update --init --recursive
+
+alias cp='cp -a'
+# copy only needed files
+mkdir examples
+cp tmp-tinyusb/examples/{device,host} examples/
+# STMF4 only
+rm -rf examples/device/cdc_msc
+
+
+mkdir -p hw/bsp ; cp tmp-tinyusb/hw/bsp/{*.h,*.c,stm32f103bluepill} hw/bsp
+
+mkdir -p hw/mcu/st/st_driver/
+cp tmp-tinyusb/hw/mcu/st/st_driver/STM32F1xx_HAL_Driver hw/mcu/st/st_driver/
+rm -rf hw/mcu/st/st_driver/STM32F1xx_HAL_Driver/{Release_Notes.html,Inc/Legacy,Src/Legacy}
+
+mkdir -p hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Source/Templates/gcc
+cp tmp-tinyusb/hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Source/Templates/system_stm32f1xx.c        hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Source/Templates/
+cp tmp-tinyusb/hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Source/Templates/gcc/startup_stm32f103xb.s hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Source/Templates/gcc/
+
+mkdir -p hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Include/
+cp tmp-tinyusb/hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Include/{stm32f1xx.h,stm32f103xb.h,system_stm32f1xx.h} hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Include
+
+mkdir -p hw/mcu/st/st_driver/CMSIS/Include
+cp tmp-tinyusb/hw/mcu/st/st_driver/CMSIS/Include/{cmsis_gcc.h,core_cm3.h,cmsis_version.h,cmsis_compiler.h} hw/mcu/st/st_driver/CMSIS/Include
+
+mkdir lib ; cp tmp-tinyusb/lib/{fatfs,lwip,networking} lib/
+cp tmp-tinyusb/src .
+
+# rm -rf tmp-tinyusb
+
+# change asm() to __asm__()
+sed -i '' "s/asm/__asm__/g" $(grep -Rl -w asm hw src)
+
+# get newlib libc from Debian:
+# wellp, dpkg -S '/usr/lib/arm-none-eabi/lib/thumb/v7-m/libc.a
+# dpkg-query: no path found matching pattern /usr/lib/arm-none-eabi/lib/thumb/v7-m/libc.a
+# -> installed by something mysterious, not by:
+# libnewlib-arm-none-eabi libnewlib-dev libnewlib-nano-arm-none-eabi gcc-arm-none-eabi
+
+wget http://ftp.de.debian.org/debian/pool/main/n/newlib/libnewlib-arm-none-eabi_3.1.0.20181231-1_all.deb
+ar -x libnewlib-arm-none-eabi*deb data.tar.xz
+tar xvf data.tar.xz -C . ./usr/lib/arm-none-eabi/newlib/thumb/v7-m/libc.a
+rm libnewlib-arm-none-eabi*deb data.tar.xz
+
+git init .
+git add -f examples hw lib src Makefile libc.a
+git commit -m "initial import"
