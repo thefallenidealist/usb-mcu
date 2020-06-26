@@ -1,9 +1,9 @@
-# created 141129
-# updated 190921 change to clang (8.0 instead of 3.9)
+# 141129 created
+# 200621 modified for tinyusb
 
 CLANG_VERSION=90
 
-NAME	= tinyusb
+NAME	= usb
 CC	= clang$(CLANG_VERSION)
 
 LD  		= ld.lld$(CLANG_VERSION)
@@ -78,6 +78,9 @@ dirs: $(DIR_BUILD)
 clean:
 	rm -rf $(DIR_BUILD)/
 
+clean-deep: clean
+	rm -rf ./examples ./hw ./lib ./src tmp-tinyusb/ libc.a tusb_config.h
+
 # build all .c files with one recipe (must be one recipe for all files)
 vpath %.c \
 	hw/mcu/st/st_driver/CMSIS/Device/ST/STM32F1xx/Source/Templates/ \
@@ -87,7 +90,7 @@ vpath %.c \
 	src/class/dfu src/class/cdc src/class/dfu src/class/hid src/class/midi src/class/msc src/class/net \
 	src/class/usbtmc src/class/vendor src/portable/st/stm32_fsdev \
 	examples/device/hid_composite/src/
-$(DIR_BUILD)/%.o: %.c
+$(DIR_BUILD)/%.o: %.c config
 	@echo CC $<
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
@@ -96,16 +99,15 @@ $(DIR_BUILD)/%.o: %.s
 	@echo AS $<
 	@$(CC) $(ASFLAGS) -x assembler-with-cpp -c -o $@ $<
 
+config:
+	@echo "Using tusb_config.h from example:"
+	ln -s examples/device/hid_generic_inout/src/tusb_config.h .
+
 lib: dirs $(OBJS)
 	@echo Creating lib
 	@$(AR) rcs $(DIR_BUILD)/lib$(NAME).a $(OBJS)
 	@ls -lh $(DIR_BUILD)/lib$(NAME).a
 	@echo "You will need to provide main.c, tusb_config.h, usb_descriptors.c, usb_descriptors.h"
-
-example: dirs $(OBJS)
-	@echo LD $@
-	@$(LD) $(LDFLAGS) $(OBJS) -o $(DIR_BUILD)/$@.elf -lc
-	@$(SIZE) $(DIR_BUILD)/$@.elf
 
 $(DIR_BUILD):
 	@mkdir -p $(DIR_BUILD)

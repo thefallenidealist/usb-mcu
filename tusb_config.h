@@ -1,0 +1,1 @@
+examples/device/hid_generic_inout/src/tusb_config.h
